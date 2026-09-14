@@ -1,0 +1,11 @@
+node_modules/
+
+# Your photos and slideshow records live here — not source code.
+uploads/
+data/
+
+# Things the Finder and editors leave behind
+.DS_Store
+_to_delete/
+*.log
+.env

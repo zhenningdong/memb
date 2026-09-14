@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>memory blue</title>
+    <meta name="description" content="似水年华 — memories, like water. Three to thirty photographs become a slideshow you can watch here, share by link, or download as a video." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23e4edf3'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%232f6f9f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%232f6f9f' stroke-opacity='.45'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="water" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>memory blue</a>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow"><span class="cn" lang="zh">似水年华</span> · memories, like water</p>
+        <h1>Some afternoons don't end. <em>They keep drifting back.</em></h1>
+        <p class="lede">Choose a few photographs — three to thirty — set the pace, and let them drift past once more: on this screen, on a phone across the room, or as a video you keep.</p>
+      </section>
+
+      <!-- Shown when the server program is older than this page (Node keeps running
+           the code it was started with), or isn't running at all. app.js fills it in. -->
+      <aside id="server-notice" class="notice" role="status" aria-live="polite" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z" /></svg>
+        <div>
+          <strong id="server-notice-title"></strong>
+          <p id="server-notice-text"></p>
+          <p class="notice-how">
+            Quit the Terminal window where memory blue is running (<kbd>Ctrl</kbd>+<kbd>C</kbd>, or ⌘Q on Terminal),
+            then double-click <code>start.command</code> in the memory blue folder — or run <code>npm start</code> there.
+            This page will reload by itself once the new server is up.
+          </p>
+        </div>
+      </aside>
+
+      <form id="create-form" class="card create" novalidate>
+        <label class="dropzone" id="dropzone" for="file-input" tabindex="0">
+          <input id="file-input" type="file" accept="image/*,.jpg,.jpeg,.jfif,.png,.gif,.webp,.avif,.heic,.heif,.hif,.tif,.tiff,.bmp,.dng,.jp2,.psd,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2,.pef,.srw" multiple hidden />
+          <div class="dropzone-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4.5" width="18" height="15" rx="1" />
+              <circle cx="8.5" cy="10" r="1.6" />
+              <path d="M21 16.5l-5.2-5.2a1.5 1.5 0 0 0-2.1 0L6 19" />
+            </svg>
+            <strong>Set your photographs down here</strong>
+            <span>or click to choose · three to thirty · JPG, PNG, HEIC, WebP, TIFF, RAW…</span>
+          </div>
+        </label>
+
+        <!-- What happened to the files just chosen or dropped, said right here where they arrive:
+             files that weren't photographs, one too big to send, the page being full, a single
+             photo where several were probably meant. -->
+        <p id="photo-notice" class="photo-notice" role="status" aria-live="polite" hidden></p>
+
+        <ul id="photo-list" class="photo-list" aria-label="Chosen photographs, in order — drag a print to move it, click one to select it"></ul>
+        <div id="photo-actions" class="photo-actions">
+          <p id="photo-hint" class="hint" aria-live="polite">No photographs yet.</p>
+          <button id="shuffle-btn" class="btn small ghost" type="button" hidden title="Deal the prints out in a random order">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 4l4 3.5-4 3.5V8.5h-1.7c-1 0-1.9.5-2.5 1.3l-1.6 2.2 1.6 2.2c.6.8 1.5 1.3 2.5 1.3H17V13l4 3.5-4 3.5v-2.5h-1.7c-1.6 0-3.1-.8-4.1-2.1L10 13.7l-1.2 1.7c-1 1.3-2.5 2.1-4.1 2.1H3v-2h1.7c1 0 1.9-.5 2.5-1.3L8.8 12 7.2 9.8c-.6-.8-1.5-1.3-2.5-1.3H3v-2h1.7c1.6 0 3.1.8 4.1 2.1l1.2 1.7 1.2-1.7c1-1.3 2.5-2.1 4.1-2.1H17V4z" /></svg>
+            <span>Shuffle</span>
+          </button>
+          <!-- Shown instead of the two above while prints are selected. Sticks to the bottom
+               of the window when the page of prints is taller than the screen. -->
+          <div id="selection-bar" class="selection-bar" hidden>
+            <button id="select-none" class="icon-btn selection-clear" type="button" title="Done — keep everything (Esc)" aria-label="Done selecting">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z" /></svg>
+            </button>
+            <span id="selection-count" class="selection-count" aria-live="polite"></span>
+            <button id="select-all" class="btn small ghost" type="button">Select all</button>
+            <button id="remove-selected" class="btn small danger" type="button" title="Remove the selected photographs (⌫) — you can undo it">Remove</button>
+          </div>
+        </div>
+
+        <div class="settings">
+          <div class="field">
+            <label for="title">Title <span class="optional">if you like</span></label>
+            <input id="title" name="title" class="text-input" type="text" maxlength="80" placeholder="An afternoon by the water, 2019" autocomplete="off" />
+          </div>
+
+          <div class="field">
+            <label for="duration">Seconds per photograph <output id="duration-out" for="duration">4</output></label>
+            <input id="duration" name="duration" type="range" min="2" max="15" step="0.5" value="4" />
+          </div>
+
+          <fieldset class="field" style="grid-column: 1 / -1">
+            <legend>Transition</legend>
+            <div class="segmented" role="radiogroup" aria-label="Transition">
+              <label><input type="radio" name="transition" value="fade" checked /><span>Dissolve</span></label>
+              <label><input type="radio" name="transition" value="slide" /><span>Slide</span></label>
+              <label><input type="radio" name="transition" value="cut" /><span>Cut</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field toggles" style="grid-column: 1 / -1">
+            <label class="check"><input id="motion" name="motion" type="checkbox" checked /> <span><span class="check-name">Ken Burns motion</span> <span class="check-note">a slow drift and zoom on each photograph</span></span></label>
+            <label class="check"><input id="shuffle" name="shuffle" type="checkbox" /> <span><span class="check-name">Shuffle</span> <span class="check-note">play in a random order, a new surprise each time it starts</span></span></label>
+            <label class="check"><input id="blurfill" name="background" type="checkbox" /> <span><span class="check-name">Blurred background</span> <span class="check-note">fill the space beside a photograph with a soft, blurred copy of it (otherwise black)</span></span></label>
+          </div>
+
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="music-input">Music <span class="optional">optional — plays along, and goes into the video · MP3, M4A, FLAC, WAV, AIFF, OGG…</span></label>
+            <input id="music-input" type="file" accept="audio/*,.mp3,.m4a,.m4b,.m4r,.aac,.wav,.wave,.aif,.aiff,.aifc,.caf,.flac,.ogg,.oga,.opus,.weba,.webm,.mka,.wma,.amr,.3gp,.ape,.alac,.ac3,.mp2,.mpga,.dsf,.dff,.wv,.tta,.au,.snd" hidden />
+            <div class="music-row">
+              <button id="music-choose" class="btn small" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.6a3.5 3.5 0 1 1-2-3.16V6.5L8 7.6v9a3.5 3.5 0 1 1-2-3.16V6.1L14 3z" /></svg>
+                <span>Choose a track</span>
+              </button>
+              <span id="music-name" class="music-name" hidden></span>
+              <button id="music-remove" class="btn small ghost" type="button" hidden>Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <button id="create-btn" class="btn primary" type="submit" disabled>Make the slideshow</button>
+        </div>
+      </form>
+
+      <section class="library" aria-labelledby="library-heading">
+        <div class="library-head">
+          <h2 id="library-heading">Your album</h2>
+          <span id="library-count" class="library-count"></span>
+        </div>
+        <ul id="library-list" class="library-list"></ul>
+        <p id="library-empty" class="hint" hidden>Nothing kept yet — the first slideshow you make will live here.</p>
+      </section>
+    </main>
+
+    <template id="photo-item-template">
+      <li class="photo-item">
+        <img class="photo-thumb" alt="" draggable="false" />
+        <span class="photo-note" hidden></span>
+        <button type="button" class="photo-select" role="checkbox" aria-checked="false" aria-label="Select this photograph" title="Select">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6 12-12-1.4-1.4z" /></svg>
+        </button>
+        <span class="photo-index"></span>
+        <div class="photo-tools">
+          <button type="button" class="icon-btn" data-action="left" title="Move earlier">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5.5 9 12l6.5 6.5-1.4 1.4L6.2 12l7.9-7.9z" /></svg>
+          </button>
+          <button type="button" class="icon-btn" data-action="remove" title="Remove">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z" /></svg>
+          </button>
+          <button type="button" class="icon-btn" data-action="right" title="Move later">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5 15 12l-6.5 6.5 1.4 1.4 7.9-7.9-7.9-7.9z" /></svg>
+          </button>
+        </div>
+      </li>
+    </template>
+
+    <template id="library-item-template">
+      <li class="library-item">
+        <a class="library-link" href="#"><img class="library-cover" alt="" loading="lazy" /></a>
+        <div class="library-body">
+          <span class="library-title"></span>
+          <span class="library-meta"></span>
+        </div>
+        <div class="library-actions">
+          <a class="btn small" href="#">Watch</a>
+          <button type="button" class="btn small ghost danger" data-action="delete">Delete</button>
+        </div>
+      </li>
+    </template>
+
+    <!-- "Three photographs removed · Undo": removing prints is undoable rather than confirmed. -->
+    <div id="page-toast" class="page-toast" role="status" aria-live="polite" hidden>
+      <span id="page-toast-text"></span>
+      <button id="page-toast-undo" class="toast-action" type="button">Undo</button>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

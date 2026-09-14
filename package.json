@@ -1,0 +1,18 @@
+{
+  "name": "memory-blue",
+  "version": "1.8.0",
+  "private": true,
+  "description": "Upload three to thirty photos (and a piece of music) and get a slideshow you can play in the browser, share by link, or download as a video.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.3.0"
+  }
+}

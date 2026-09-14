@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>memory blue</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23e4edf3'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%232f6f9f'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%232f6f9f' stroke-opacity='.45'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="player-page">
+    <div class="water" aria-hidden="true"><i></i><i></i><i></i></div>
+    <!-- A blurred, dimmed copy of the current photo glows behind the window, like light through water. -->
+    <div id="ambient" class="ambient" aria-hidden="true"><div></div><div></div></div>
+
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>memory blue</a>
+      <a class="btn small ghost" href="/">Back to the album</a>
+    </header>
+
+    <main class="player-main">
+      <section id="player" class="player-window" aria-label="Slideshow player">
+        <header class="window-bar">
+          <h1 id="title" class="window-title"></h1>
+          <div id="window-actions" class="window-actions">
+            <button id="download-btn" class="btn small download" type="button" title="Download as a video file">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 3h2v9.2l3.1-3.1 1.4 1.4-5.5 5.5-5.5-5.5 1.4-1.4 3.1 3.1zM4 15h2v3h12v-3h2v5H4z" />
+              </svg>
+              <span>Download</span>
+            </button>
+            <button id="mute-btn" class="icon-btn" type="button" title="Mute the music" aria-label="Mute the music" aria-pressed="false" hidden>
+              <svg id="icon-sound-on" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9v6h4l5 4V5L8 9H4zm11.5 3a3.5 3.5 0 0 0-2-3.15v6.3a3.5 3.5 0 0 0 2-3.15zm-2-7.4v2.06A5.5 5.5 0 0 1 17.5 12a5.5 5.5 0 0 1-4 5.34v2.06A7.5 7.5 0 0 0 19.5 12a7.5 7.5 0 0 0-6-7.4z" />
+              </svg>
+              <svg id="icon-sound-off" viewBox="0 0 24 24" aria-hidden="true" hidden>
+                <path d="M4 9v6h4l5 4V5L8 9H4zm12.3 3 2.5-2.5-1.4-1.4-2.5 2.5-2.5-2.5-1.4 1.4 2.5 2.5-2.5 2.5 1.4 1.4 2.5-2.5 2.5 2.5 1.4-1.4-2.5-2.5z" />
+              </svg>
+            </button>
+            <button id="share-btn" class="icon-btn" type="button" title="Copy link" aria-label="Copy link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10.6 13.4a1 1 0 0 1 0-1.4l2.8-2.8a3 3 0 1 1 4.2 4.2l-1.4 1.4-1.4-1.4 1.4-1.4a1 1 0 1 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4l-2.8 2.8a3 3 0 1 1-4.2-4.2l1.4-1.4 1.4 1.4-1.4 1.4a1 1 0 1 0 1.4 1.4l2.8-2.8a1 1 0 0 1 1.4 0z" />
+              </svg>
+            </button>
+            <button id="arrange-btn" class="icon-btn" type="button" title="Photographs &amp; music" aria-label="Photographs and music" aria-expanded="false" aria-controls="arrange-panel">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z" />
+              </svg>
+            </button>
+            <button id="settings-btn" class="icon-btn" type="button" title="Playback settings" aria-label="Playback settings" aria-expanded="false" aria-controls="settings-panel">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h10v2H4zm12 0h4v2h-4zM4 11h4v2H4zm6 0h10v2H10zM4 16h12v2H4zm14 0h2v2h-2z" />
+                <circle cx="15" cy="7" r="2.2" /><circle cx="9" cy="12" r="2.2" /><circle cx="17" cy="17" r="2.2" />
+              </svg>
+            </button>
+            <button id="fullscreen-btn" class="icon-btn" type="button" title="Fullscreen (F)" aria-label="Fullscreen">
+              <svg id="icon-expand" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z" />
+              </svg>
+              <svg id="icon-compress" viewBox="0 0 24 24" aria-hidden="true" hidden>
+                <path d="M10 4v6H4V8h4V4zm4 0h2v4h4v2h-6zM4 14h6v6H8v-4H4zm10 0h6v2h-4v4h-2z" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div id="stage" class="stage">
+          <div id="stage-message" class="stage-message">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Gathering the photographs…</p>
+          </div>
+          <button id="sound-pill" class="sound-pill" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm11.5 3a3.5 3.5 0 0 0-2-3.15v6.3a3.5 3.5 0 0 0 2-3.15z" /></svg>
+            Play with music
+          </button>
+        </div>
+
+        <footer id="window-controls" class="window-controls">
+          <div id="progress" class="progress" aria-hidden="true"></div>
+          <div class="controls">
+            <span id="controls-info" class="controls-info"></span>
+            <div class="controls-main">
+              <button id="prev-btn" class="icon-btn" type="button" title="Previous (←)" aria-label="Previous photo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5.5 9 12l6.5 6.5-1.4 1.4L6.2 12l7.9-7.9z" /></svg>
+              </button>
+              <button id="play-btn" class="icon-btn play" type="button" title="Pause (Space)" aria-label="Pause">
+                <svg id="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z" /></svg>
+                <svg id="icon-play" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M8 5.5v13l10-6.5z" /></svg>
+                <svg id="icon-replay" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z" /></svg>
+              </button>
+              <button id="next-btn" class="icon-btn" type="button" title="Next (→)" aria-label="Next photo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5 15 12l-6.5 6.5 1.4 1.4 7.9-7.9-7.9-7.9z" /></svg>
+              </button>
+            </div>
+            <span id="counter" class="counter" aria-live="polite"></span>
+          </div>
+        </footer>
+
+        <aside id="settings-panel" class="panel" hidden aria-label="Playback settings">
+          <h2>Playback</h2>
+          <div class="field">
+            <label for="p-duration">Seconds per photograph <output id="p-duration-out" for="p-duration">4</output></label>
+            <input id="p-duration" type="range" min="2" max="15" step="0.5" value="4" />
+          </div>
+          <fieldset class="field">
+            <legend>Transition</legend>
+            <div class="segmented" role="radiogroup" aria-label="Transition">
+              <label><input type="radio" name="p-transition" value="fade" /><span>Dissolve</span></label>
+              <label><input type="radio" name="p-transition" value="slide" /><span>Slide</span></label>
+              <label><input type="radio" name="p-transition" value="cut" /><span>Cut</span></label>
+            </div>
+          </fieldset>
+          <label class="check"><input id="p-motion" type="checkbox" /> <span><span class="check-name">Ken Burns motion</span> <span class="check-note">a slow drift and zoom on each photo</span></span></label>
+          <label class="check"><input id="p-shuffle" type="checkbox" /> <span><span class="check-name">Shuffle</span> <span class="check-note">a new random order each time it starts</span></span></label>
+          <label class="check"><input id="p-blur" type="checkbox" /> <span><span class="check-name">Blurred background</span> <span class="check-note">a soft copy of the photo instead of black</span></span></label>
+          <label class="check"><input id="p-loop" type="checkbox" /> <span><span class="check-name">Repeat</span> <span class="check-note">begin again when it reaches the end</span></span></label>
+          <div class="panel-actions">
+            <span id="save-status" class="hint">Changes apply right away.</span>
+            <button id="save-btn" class="btn small primary" type="button">Keep for this link</button>
+          </div>
+        </aside>
+
+        <!-- Photographs & music: the order of the prints (drag to move, kept right away) and the track. -->
+        <aside id="arrange-panel" class="panel arrange-panel" hidden aria-label="Photographs and music">
+          <h2>Photographs &amp; music</h2>
+          <div class="field">
+            <label for="p-music-choose">Music</label>
+            <input id="p-music-input" type="file" accept="audio/*,.mp3,.m4a,.m4b,.m4r,.aac,.wav,.wave,.aif,.aiff,.aifc,.caf,.flac,.ogg,.oga,.opus,.weba,.webm,.mka,.wma,.amr,.3gp,.ape,.alac,.ac3,.mp2,.mpga,.dsf,.dff,.wv,.tta,.au,.snd" hidden />
+            <div class="music-row">
+              <span id="p-music-name" class="music-name">No music</span>
+              <button id="p-music-choose" class="btn small" type="button">Add a track</button>
+              <button id="p-music-remove" class="btn small ghost danger" type="button" hidden>Remove</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="arrange-head">
+              <span class="arrange-label">Order</span>
+              <span id="arrange-status" class="hint">Drag a print to move it — the new order is kept right away.</span>
+              <button id="arrange-in-order" class="btn small" type="button" hidden title="Turn Shuffle off and play the prints in this order">Play in this order</button>
+            </div>
+            <ul id="arrange-list" class="arrange-list" aria-label="Photographs, in order — drag a print to move it"></ul>
+          </div>
+          <div class="panel-actions">
+            <button id="arrange-shuffle" class="btn small ghost" type="button" title="Deal the prints out in a random order">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 4l4 3.5-4 3.5V8.5h-1.7c-1 0-1.9.5-2.5 1.3l-1.6 2.2 1.6 2.2c.6.8 1.5 1.3 2.5 1.3H17V13l4 3.5-4 3.5v-2.5h-1.7c-1.6 0-3.1-.8-4.1-2.1L10 13.7l-1.2 1.7c-1 1.3-2.5 2.1-4.1 2.1H3v-2h1.7c1 0 1.9-.5 2.5-1.3L8.8 12 7.2 9.8c-.6-.8-1.5-1.3-2.5-1.3H3v-2h1.7c1.6 0 3.1.8 4.1 2.1l1.2 1.7 1.2-1.7c1-1.3 2.5-2.1 4.1-2.1H17V4z" /></svg>
+              <span>Shuffle</span>
+            </button>
+            <button id="arrange-close" class="btn small primary" type="button">Done</button>
+          </div>
+        </aside>
+
+        <template id="arrange-item-template">
+          <li class="arrange-item">
+            <img class="arrange-thumb" alt="" draggable="false" loading="lazy" decoding="async" />
+            <span class="arrange-index"></span>
+            <span class="arrange-tools">
+              <button type="button" class="arrange-move" data-action="left" title="Move earlier" aria-label="Move earlier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5.5 9 12l6.5 6.5-1.4 1.4L6.2 12l7.9-7.9z" /></svg></button>
+              <button type="button" class="arrange-move" data-action="right" title="Move later" aria-label="Move later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5 15 12l-6.5 6.5 1.4 1.4 7.9-7.9-7.9-7.9z" /></svg></button>
+            </span>
+          </li>
+        </template>
+
+        <aside id="export-panel" class="panel export-panel" hidden aria-label="Download video" aria-live="polite">
+          <h2>Download video</h2>
+          <p id="export-status" class="export-status">One moment…</p>
+          <div class="export-bar" aria-hidden="true"><i id="export-bar-fill"></i></div>
+          <p id="export-note" class="hint"></p>
+          <div class="panel-actions">
+            <span id="export-format" class="hint"></span>
+            <div class="panel-buttons">
+              <button id="export-cancel" class="btn small ghost" type="button">Cancel</button>
+              <button id="export-again" class="btn small" type="button" hidden>Download again</button>
+              <button id="export-close" class="btn small primary" type="button" hidden>Done</button>
+            </div>
+          </div>
+        </aside>
+
+        <div id="toast" class="toast" role="status" hidden></div>
+      </section>
+
+      <p class="player-tip">Space to pause · ← → to move · F or a double-click for fullscreen · Download keeps it as a video</p>
+    </main>
+
+    <script type="module" src="/player.js"></script>
+  </body>
+</html>
