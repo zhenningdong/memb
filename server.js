@@ -63,7 +63,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 
 const MIN_PHOTOS = 3;
-const MAX_PHOTOS = 30;
+const MAX_PHOTOS = 300;
 const MAX_PHOTO_MB = 100; // a ProRAW or camera RAW file can be 30–80 MB
 const MAX_MUSIC_MB = 500; // a lossless track can be 100 MB+; it is converted to AAC after upload
 const MUSIC_BITRATE = 256_000; // AAC, for converted tracks
@@ -293,36 +293,49 @@ async function run(cmd, args, timeout = 60_000) {
 // Where `sips` is missing (not a Mac), HEIC is kept as it is (Safari can show
 // it) and anything else is refused with a clear message.
 async function normalizePhotos(dir, photos) {
-  return Promise.all(
-    photos.map(async (photo) => {
-      const ext = path.extname(photo.file).toLowerCase();
-      if (PHOTO_KEEP.has(ext)) return photo;
-      const src = path.join(dir, photo.file);
-      const outName = `${photo.id}.jpg`;
-      const out = path.join(dir, outName);
-      try {
-        await run("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "88", "--resampleHeightWidthMax", "2048", src, "--out", out], 120_000);
-        const { size } = await fsp.stat(out);
-        if (!size) throw new Error("empty output");
-        await fsp.rm(src, { force: true });
-        return { ...photo, file: outName, type: "image/jpeg", size, convertedFrom: ext.slice(1) };
-      } catch (err) {
-        await fsp.rm(out, { force: true }).catch(() => {});
-        const jpegBytes = ext === ".jfif" || ext === ".jpe"; // JPEG under another name — browsers don't mind
-        if (err.code === "ENOENT" && (HEIC_EXTS.has(ext) || ext === ".bmp" || jpegBytes)) {
-          console.warn(`sips isn't available here; keeping ${photo.originalName} as it is.`);
-          return photo;
-        }
-        console.warn(`Couldn't convert ${photo.originalName} (${err.code || err.message}).`);
-        throw new HttpError(
-          400,
-          err.code === "ENOENT"
-            ? `"${photo.originalName}" is a ${formatName(ext)} file, which browsers can't show; on a Mac memory blue converts it automatically — here, please export it as JPEG first`
-            : `Couldn't read "${photo.originalName}" — please export it as JPEG and try again`,
-        );
+  // A few conversions at a time: three hundred HEICs must not become three hundred sips processes at once.
+  return mapLimited(photos, 4, async (photo) => {
+    const ext = path.extname(photo.file).toLowerCase();
+    if (PHOTO_KEEP.has(ext)) return photo;
+    const src = path.join(dir, photo.file);
+    const outName = `${photo.id}.jpg`;
+    const out = path.join(dir, outName);
+    try {
+      await run("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "88", "--resampleHeightWidthMax", "2048", src, "--out", out], 120_000);
+      const { size } = await fsp.stat(out);
+      if (!size) throw new Error("empty output");
+      await fsp.rm(src, { force: true });
+      return { ...photo, file: outName, type: "image/jpeg", size, convertedFrom: ext.slice(1) };
+    } catch (err) {
+      await fsp.rm(out, { force: true }).catch(() => {});
+      const jpegBytes = ext === ".jfif" || ext === ".jpe"; // JPEG under another name — browsers don't mind
+      if (err.code === "ENOENT" && (HEIC_EXTS.has(ext) || ext === ".bmp" || jpegBytes)) {
+        console.warn(`sips isn't available here; keeping ${photo.originalName} as it is.`);
+        return photo;
       }
-    }),
-  );
+      console.warn(`Couldn't convert ${photo.originalName} (${err.code || err.message}).`);
+      throw new HttpError(
+        400,
+        err.code === "ENOENT"
+          ? `"${photo.originalName}" is a ${formatName(ext)} file, which browsers can't show; on a Mac memory blue converts it automatically — here, please export it as JPEG first`
+          : `Couldn't read "${photo.originalName}" — please export it as JPEG and try again`,
+      );
+    }
+  });
+}
+
+// Promise.all with at most `limit` jobs in flight; results keep their order.
+async function mapLimited(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 // What's inside an audio file: the codec and the length. `afinfo` on a Mac,

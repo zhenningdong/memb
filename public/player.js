@@ -182,7 +182,7 @@ async function init() {
   // One <figure> per photo: the photo fitted inside the frame on plain black —
   // or, with the "blurred background" setting on, over a blurred cover-fit copy
   // of itself. Sources are set lazily (a few photos around the current one),
-  // so thirty photographs don't all load and decode at once.
+  // so three hundred photographs don't all load and decode at once.
   state.slides = slideshow.photos.map((photo, i) => {
     const figure = document.createElement("figure");
     figure.className = "slide";
@@ -1060,8 +1060,19 @@ function updateExportProgress(fraction, stage) {
   els.exportBarFill.style.width = `${pct}%`;
 }
 
+// Above this, the video is written straight to a file (about six minutes of 1080p). Tests may lower it.
+const STREAM_THRESHOLD_BYTES = Number(window.__memoryBlue?.streamThreshold) || 400e6;
+
 function formatBytes(bytes) {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
   return bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`;
+}
+
+function formatSeconds(seconds) {
+  const s = Math.round(seconds);
+  if (s < 60) return `${s} seconds`;
+  const m = Math.floor(s / 60);
+  return `${m} min ${String(s % 60).padStart(2, "0")} s`;
 }
 
 async function startExport() {
@@ -1076,26 +1087,55 @@ async function startExport() {
   state.exportController = controller;
   showExportPanel();
 
+  let saveTo = null; // { handle, stream } when a long video is written straight to a file
   try {
-    const { exportSlideshow, downloadBlob, safeFilename } = await import("./export.js");
+    const { exportSlideshow, downloadBlob, safeFilename, estimateBytes } = await import("./export.js");
+    let filename = safeFilename(state.slideshow.title, "mp4");
+
+    // A short show becomes a file in Downloads, as always. A long one (a gigabyte
+    // or so for three hundred photographs) would be a struggle to build in
+    // memory, so where the browser allows it we ask where to save it first and
+    // write the video straight to that file as it is made.
+    const estimate = estimateBytes(state.slideshow.photos.length, state.settings);
+    if (estimate > STREAM_THRESHOLD_BYTES && typeof window.showSaveFilePicker === "function") {
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: "MP4 video", accept: { "video/mp4": [".mp4"] } }] });
+        saveTo = { handle, stream: await handle.createWritable() };
+        filename = handle.name;
+      } catch (err) {
+        if (err && err.name === "AbortError") throw err; // they changed their mind
+        saveTo = null; // no picker after all: build it in memory
+      }
+    }
+
     const result = await exportSlideshow(
       { photos: state.slideshow.photos, settings: state.settings, music: state.slideshow.music },
-      { signal: controller.signal, onProgress: updateExportProgress },
+      { signal: controller.signal, onProgress: updateExportProgress, stream: saveTo?.stream || null },
     );
-    const filename = safeFilename(state.slideshow.title, result.extension);
-    state.lastExport = { blob: result.blob, filename };
-    downloadBlob(result.blob, filename);
+    let bytes;
+    if (result.streamed) {
+      bytes = (await saveTo.handle.getFile()).size;
+      state.lastExport = null;
+    } else {
+      if (saveTo) await saveTo.stream.abort().catch(() => {}); // the exporter fell back to memory
+      filename = safeFilename(state.slideshow.title, result.extension);
+      bytes = result.blob.size;
+      state.lastExport = { blob: result.blob, filename };
+      downloadBlob(result.blob, filename);
+    }
 
     els.exportStatus.textContent = `Saved as ${filename}`;
     els.exportBarFill.style.width = "100%";
     const musicNote = result.audioNote ? ` · ${result.audioNote}` : "";
-    els.exportNote.textContent = `${formatBytes(result.blob.size)} · ${Math.round(result.seconds)} seconds${musicNote} · it's in your Downloads folder`;
+    const where = result.streamed ? "it's in the folder you chose" : "it's in your Downloads folder";
+    els.exportNote.textContent = `${formatBytes(bytes)} · ${formatSeconds(result.seconds)}${musicNote} · ${where}`;
     els.exportFormat.textContent = result.format;
     els.exportCancel.hidden = true;
-    els.exportAgain.hidden = false;
+    els.exportAgain.hidden = result.streamed;
     els.exportClose.hidden = false;
-    showToast(`Downloaded ${filename}`);
+    showToast(`Saved ${filename}`);
   } catch (err) {
+    if (saveTo) await saveTo.stream.abort().catch(() => {}); // nothing half-written is left behind
     if (err && err.name === "AbortError") {
       els.exportPanel.hidden = true;
     } else {

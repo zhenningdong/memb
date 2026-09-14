@@ -6,7 +6,7 @@
 // Preferred path: WebCodecs (H.264 + AAC → .mp4 via the vendored mp4-muxer).
 // Fallback for browsers without WebCodecs: MediaRecorder (real-time capture).
 
-import { Muxer, ArrayBufferTarget } from "./vendor/mp4-muxer.mjs";
+import { Muxer, ArrayBufferTarget, FileSystemWritableFileStreamTarget } from "./vendor/mp4-muxer.mjs";
 import { kenBurnsAt, kenBurnsPlan, shuffled, TRANSITION_S } from "./motion.js";
 
 const FPS = 30;
@@ -131,7 +131,7 @@ async function loadMusic(url, seconds) {
 }
 
 // ---------------------------------------------------------------------------
-// Photos are decoded a few at a time: thirty full-size photographs at once
+// Photos are decoded a few at a time: three hundred full-size photographs at once
 // would be several hundred megabytes.
 // ---------------------------------------------------------------------------
 
@@ -428,14 +428,16 @@ async function encodeAudioWithWebCodecs(muxer, pcm, audioChoice, signal) {
   }
 }
 
-async function encodeWithWebCodecs(renderer, timeline, choice, pcm, onProgress, signal) {
+async function encodeWithWebCodecs(renderer, timeline, choice, pcm, onProgress, signal, stream = null) {
   const { config, codec, size } = choice;
   const audioChoice = pcm ? await pickAudioConfig() : null;
+  // With a file stream (a long show, saved straight to disk) the MP4 is written
+  // as it is made and never held in memory; otherwise it is built in memory.
   const muxer = new Muxer({
-    target: new ArrayBufferTarget(),
+    target: stream ? new FileSystemWritableFileStreamTarget(stream) : new ArrayBufferTarget(),
     video: { codec: codec.mux, width: size.width, height: size.height, frameRate: FPS },
     audio: audioChoice ? { codec: audioChoice.codec.mux, sampleRate: AUDIO_RATE, numberOfChannels: 2 } : undefined,
-    fastStart: "in-memory",
+    fastStart: stream ? false : "in-memory",
     firstTimestampBehavior: "offset",
   });
 
@@ -447,7 +449,8 @@ async function encodeWithWebCodecs(renderer, timeline, choice, pcm, onProgress, 
     } catch (err) {
       if (err && err.name === "AbortError") throw err;
       // Without the audio chunks the muxer would still expect a track; start over video-only.
-      return encodeWithWebCodecs(renderer, timeline, choice, null, onProgress, signal).then((r) => ({
+      if (stream) await stream.truncate(0); // drop what the failed attempt wrote
+      return encodeWithWebCodecs(renderer, timeline, choice, null, onProgress, signal, stream).then((r) => ({
         ...r,
         audioNote: "the music couldn't be encoded in this browser, so the video has no sound",
       }));
@@ -507,9 +510,11 @@ async function encodeWithWebCodecs(renderer, timeline, choice, pcm, onProgress, 
   }
 
   muxer.finalize();
+  if (stream) await stream.close();
   onProgress(1);
   return {
-    blob: new Blob([muxer.target.buffer], { type: "video/mp4" }),
+    blob: stream ? null : new Blob([muxer.target.buffer], { type: "video/mp4" }),
+    streamed: Boolean(stream),
     extension: "mp4",
     format: `${size.label} MP4 · ${codec.label}${audioLabel ? ` · ${audioLabel}` : ""}`,
     audioNote: pcm && !audioLabel ? "the music couldn't be included in this browser" : null,
@@ -625,13 +630,22 @@ export function safeFilename(title, extension) {
   return `${base || "slideshow"}.${extension}`;
 }
 
+// How big the video will be, roughly (bytes): used to decide whether to save it
+// straight to disk rather than build it in memory.
+export function estimateBytes(count, settings) {
+  const seconds = buildTimeline(count, settings.duration, settings.transition).total;
+  return (seconds * (8_000_000 + 160_000)) / 8;
+}
+
 /**
  * Render and encode a slideshow.
  * @param {{ photos: {url: string}[], settings: {duration: number, transition: string} }} slideshow
- * @param {{ onProgress?: (fraction: number, stage: string) => void, signal?: AbortSignal }} options
- * @returns {Promise<{ blob: Blob, extension: string, format: string, seconds: number }>}
+ * @param {{ onProgress?: (fraction: number, stage: string) => void, signal?: AbortSignal, stream?: FileSystemWritableFileStream | null }} options
+ *   `stream`: write the MP4 straight to this file as it is made (WebCodecs only; long shows). The stream is
+ *   closed on success, aborted on failure, and aborted unused when the browser has to fall back to MediaRecorder.
+ * @returns {Promise<{ blob: Blob | null, streamed: boolean, extension: string, format: string, seconds: number }>}
  */
-export async function exportSlideshow(slideshow, { onProgress = () => {}, signal } = {}) {
+export async function exportSlideshow(slideshow, { onProgress = () => {}, signal, stream = null } = {}) {
   const { photos, settings, music } = slideshow;
   if (!photos?.length) throw new Error("There are no photos to export");
 
@@ -659,7 +673,14 @@ export async function exportSlideshow(slideshow, { onProgress = () => {}, signal
 
   const choice = await pickWebCodecsConfig();
   const recorderMime = choice ? null : pickRecorderMime();
-  if (!choice && !recorderMime) throw new Error("This browser can't encode video. Try Chrome, Edge or Safari.");
+  if (!choice && !recorderMime) {
+    if (stream) await stream.abort().catch(() => {});
+    throw new Error("This browser can't encode video. Try Chrome, Edge or Safari.");
+  }
+  if (stream && !choice) {
+    await stream.abort().catch(() => {}); // MediaRecorder hands over one blob at the end; nothing to stream
+    stream = null;
+  }
 
   const size = choice ? choice.size : { width: 1280, height: 720 };
   const renderer = new Renderer(pool, size.width, size.height, settings, timeline);
@@ -667,9 +688,12 @@ export async function exportSlideshow(slideshow, { onProgress = () => {}, signal
 
   try {
     const result = choice
-      ? await encodeWithWebCodecs(renderer, timeline, choice, pcm, progress, signal)
+      ? await encodeWithWebCodecs(renderer, timeline, choice, pcm, progress, signal, stream)
       : await encodeWithMediaRecorder(renderer, timeline, recorderMime, pcm, progress, signal);
     return { ...result, seconds: timeline.total, audioNote: result.audioNote || musicNote };
+  } catch (err) {
+    if (stream) await stream.abort().catch(() => {}); // discards the partial file
+    throw err;
   } finally {
     pool.releaseAll();
   }

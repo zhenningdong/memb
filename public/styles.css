@@ -452,7 +452,9 @@ body.is-reordering * {
 .photo-item.is-undecodable .photo-thumb {
   visibility: hidden;
 }
-/* A print whose small picture is still being made: blank paper with a slow sheen */
+/* A print whose small picture is still being made: blank paper, a little
+   lighter towards one corner. (Not animated: three hundred of these animating
+   at once would eat the very time the pictures need.) */
 .photo-item.is-loading .photo-thumb {
   visibility: hidden;
 }
@@ -463,17 +465,7 @@ body.is-reordering * {
   left: 7px;
   width: 134px;
   height: 134px;
-  background: linear-gradient(100deg, var(--paper-4) 30%, var(--paper-2) 50%, var(--paper-4) 70%);
-  background-size: 250% 100%;
-  animation: sheen 1.4s linear infinite;
-}
-@keyframes sheen {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -50% 0;
-  }
+  background: linear-gradient(135deg, var(--paper-2), var(--paper-4));
 }
 .photo-note {
   position: absolute;

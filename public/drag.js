@@ -5,13 +5,27 @@
 // quick swipe still scrolls the page). While dragging, a ghost of the print
 // follows the pointer and the real print slides into its new slot; when the
 // pointer is released `onReorder(ids)` gets the new order (the items' data-id,
-// in DOM order) — only if it actually changed.
+// in DOM order) — only if it actually changed. Holding a print near the top or
+// bottom edge scrolls the page (or the panel) so a print can travel the length
+// of a long list.
+
+const EDGE = 64; // px from the edge where scrolling starts
+const MAX_STEP = 22; // px per frame at the very edge
 
 export function dragToReorder(list, { itemSelector, onReorder, canStart = () => true }) {
   let drag = null;
 
   const items = () => [...list.children].filter((el) => el.matches(itemSelector));
   const ids = () => items().map((el) => el.dataset.id);
+
+  // The nearest ancestor that scrolls (the panel), or the window.
+  function scrollerOf(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const { overflowY } = getComputedStyle(node);
+      if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) return node;
+    }
+    return null;
+  }
 
   function activate(e) {
     const rect = drag.item.getBoundingClientRect();
@@ -28,6 +42,8 @@ export function dragToReorder(list, { itemSelector, onReorder, canStart = () => 
     drag.ghost = ghost;
     drag.item.classList.add("is-dragging");
     document.body.classList.add("is-reordering");
+    drag.scroller = scrollerOf(list);
+    drag.raf = requestAnimationFrame(tick);
     try {
       drag.item.setPointerCapture(e.pointerId);
     } catch {
@@ -38,6 +54,7 @@ export function dragToReorder(list, { itemSelector, onReorder, canStart = () => 
   function end() {
     if (!drag) return;
     clearTimeout(drag.timer);
+    cancelAnimationFrame(drag.raf);
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", end);
     document.removeEventListener("pointercancel", end);
@@ -62,6 +79,40 @@ export function dragToReorder(list, { itemSelector, onReorder, canStart = () => 
     }
   }
 
+  // Slides the print into the slot under the pointer.
+  function place(x, y) {
+    const over = document
+      .elementsFromPoint(x, y)
+      .find((el) => el !== drag.item && !el.classList.contains("drag-ghost") && el.matches?.(itemSelector) && el.parentElement === list);
+    if (!over) return;
+    const r = over.getBoundingClientRect();
+    // Prints sit in rows: decide by the horizontal middle when they share a row,
+    // by the vertical middle otherwise.
+    const sameRow = Math.abs(r.top - drag.item.getBoundingClientRect().top) < r.height / 2;
+    const wantBefore = sameRow ? x < r.left + r.width / 2 : y < r.top + r.height / 2;
+    if (wantBefore && over.previousElementSibling !== drag.item) over.before(drag.item);
+    else if (!wantBefore && over.nextElementSibling !== drag.item) over.after(drag.item);
+  }
+
+  // Every frame while dragging: scroll when the pointer is held near an edge,
+  // then re-place the print, since what lies under a still pointer has moved.
+  function tick() {
+    if (!drag?.active) return;
+    drag.raf = requestAnimationFrame(tick);
+    const { x, y, scroller } = drag;
+    if (x === undefined) return;
+    const top = scroller ? scroller.getBoundingClientRect().top : 0;
+    const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
+    let step = 0;
+    if (y < top + EDGE) step = -Math.ceil(((top + EDGE - y) / EDGE) * MAX_STEP);
+    else if (y > bottom - EDGE) step = Math.ceil(((y - (bottom - EDGE)) / EDGE) * MAX_STEP);
+    if (!step) return;
+    const before = scroller ? scroller.scrollTop : window.scrollY;
+    if (scroller) scroller.scrollTop += step;
+    else window.scrollBy(0, step);
+    if ((scroller ? scroller.scrollTop : window.scrollY) !== before) place(x, y);
+  }
+
   function move(e) {
     if (!drag) return;
     if (!drag.active) {
@@ -71,20 +122,11 @@ export function dragToReorder(list, { itemSelector, onReorder, canStart = () => 
       activate(e);
     }
     e.preventDefault();
+    drag.x = e.clientX;
+    drag.y = e.clientY;
     drag.ghost.style.left = `${e.clientX - drag.offsetX}px`;
     drag.ghost.style.top = `${e.clientY - drag.offsetY}px`;
-
-    const over = document
-      .elementsFromPoint(e.clientX, e.clientY)
-      .find((el) => el !== drag.item && !el.classList.contains("drag-ghost") && el.matches?.(itemSelector) && el.parentElement === list);
-    if (!over) return;
-    const r = over.getBoundingClientRect();
-    // Prints sit in rows: decide by the horizontal middle when they share a row,
-    // by the vertical middle otherwise.
-    const sameRow = Math.abs(r.top - drag.item.getBoundingClientRect().top) < r.height / 2;
-    const wantBefore = sameRow ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2;
-    if (wantBefore && over.previousElementSibling !== drag.item) over.before(drag.item);
-    else if (!wantBefore && over.nextElementSibling !== drag.item) over.after(drag.item);
+    place(e.clientX, e.clientY);
   }
 
   list.addEventListener("pointerdown", (e) => {

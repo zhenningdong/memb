@@ -1,6 +1,6 @@
 # memory blue
 
-Upload three to thirty photos (and a piece of music, if you like) and get a slideshow you can play in the browser, share by link, or download as a video.
+Upload three to three hundred photos (and a piece of music, if you like) and get a slideshow you can play in the browser, share by link, or download as a video.
 
 ## Run it
 
@@ -50,7 +50,7 @@ data/slideshows.json all slideshow records (title, settings, photo order)
 - **Photographs & music, in the player.** The grid button in the player's title bar opens a panel with the prints in order and the music track. Drag a print (or use the arrows that appear on it) to move it; the new order applies at once — the photo on screen stays on screen — and is kept on the server right away, so the link, the album cover and the downloaded video all follow it. *Shuffle* there deals the stored order anew; a click on a print shows it. Music is added, changed or removed from the same panel. (`public/drag.js` is the drag-to-reorder shared with the create page.)
 - **Blurred background.** Off by default: a photo that doesn't fill the frame sits on plain black. Switch it on (create page, or the player's settings) and the space beside the photo is filled with a soft, blurred, darkened copy of it — the "blur fill" video editors use for vertical clips. Applies live in the player, is kept with *Keep for this link*, and the downloaded video is rendered the same way.
 - **Ken Burns motion.** On by default for new slideshows: each photograph slowly drifts and zooms while it is on screen (`public/motion.js` holds the plan per photograph, so the player and the video move the same way). Switch it off on the create page or in the player's settings.
-- **Thirty photographs** are fine: the player only decodes a few photos around the current one, and the video exporter loads and releases them as it goes, so memory stays flat however long the show is.
+- **Three hundred photographs** are fine: the create page shows small prints and prepares the uploads in the background, the player only decodes a few photos around the current one, and the video exporter loads and releases them as it goes, so memory stays flat however long the show is. Dragging a print near the top or bottom edge scrolls the page, so a print can travel the length of a long page. A long show's video (over about six minutes) is written straight to a file you choose instead of being built in memory — in Chrome and Edge; elsewhere it is built in memory as before.
 - **Photo formats.** JPG, PNG, WebP, GIF and AVIF are stored as they are (shrunk to 2048px on the long edge in the browser when they are big). Everything else — iPhone HEIC/HEIF, ProRAW DNG, camera RAW (CR2, CR3, NEF, ARW, RAF, ORF, RW2, PEF, SRW), TIFF, BMP, PSD, JPEG 2000 — is turned into a JPEG: by the browser when it can read the format (Safari reads HEIC and TIFF), otherwise by the server with macOS's built-in `sips` (resized to 2048px, orientation kept). Photos can be up to 100 MB each. The create page shows a striped placeholder for a print it can't preview. On a computer that isn't a Mac, HEIC is kept as it is (only Safari can display it) and the other formats are refused with a message asking for a JPEG.
 - The player is a framed window on the page (the current photo glows softly behind the window, on the page itself). Inside the frame a photo sits on plain black unless *Blurred background* is on. The fullscreen button, `F`, or a double-click on the photo expands it to fill the screen; in fullscreen the controls fade out while playing and come back when you move the mouse.
 - **Download** (in the player's title bar) renders the slideshow to a video file and saves it to your Downloads folder — 1080p, 30 fps, with the pace and transition currently set in the player. The video is built in the browser: WebCodecs encodes H.264 into an MP4 (`public/export.js` + the vendored `public/vendor/mp4-muxer.mjs`), so it plays in QuickTime, on phones and in WeChat. Browsers without WebCodecs fall back to MediaRecorder, which records in real time (MP4 or WebM, whichever the browser can write). Chrome, Edge and Safari 17+ all take the fast path.
@@ -63,7 +63,7 @@ data/slideshows.json all slideshow records (title, settings, photo order)
 
 | Method | Path | Body | Notes |
 | --- | --- | --- | --- |
-| `POST` | `/api/slideshows` | multipart: `photos` ×3–30, `music` (optional), `title`, `duration`, `transition`, `motion`, `shuffle`, `background` | returns the new slideshow (201) |
+| `POST` | `/api/slideshows` | multipart: `photos` ×3–300, `music` (optional), `title`, `duration`, `transition`, `motion`, `shuffle`, `background` | returns the new slideshow (201) |
 | `PUT` | `/api/slideshows/:id/music` | multipart: `music` | adds or replaces the track |
 | `DELETE` | `/api/slideshows/:id/music` | — | removes the track |
 | `GET` | `/api/slideshows` | — | newest first, with `cover` and `photoCount` |

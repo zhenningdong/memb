@@ -1,6 +1,6 @@
 // memory blue — create page
 //
-// Lets you pick 3–30 photos (and a piece of music), order them, choose the pace,
+// Lets you pick 3–300 photos (and a piece of music), order them, choose the pace,
 // transition and motion, then uploads everything to the server and opens the
 // new slideshow.
 
@@ -8,7 +8,7 @@ import { dragToReorder } from "./drag.js";
 import { editableTitle } from "./rename.js";
 
 const MIN_PHOTOS = 3;
-let MAX_PHOTOS = 30; // the server says what it accepts (see checkServer); this is the fallback
+let MAX_PHOTOS = 300; // the server says what it accepts (see checkServer); this is the fallback
 const MAX_EDGE = 2048; // photos larger than this are downscaled before upload
 let MAX_PHOTO_MB = 100; // a ProRAW or camera RAW can be big; the server confirms these limits
 let MAX_MUSIC_MB = 500; // a lossless track can be 100 MB+ — the server converts it to AAC
@@ -29,8 +29,15 @@ const MOD_KEY = IS_MAC ? "⌘" : "Ctrl+";
 const AUDIO_EXT_RE = /\.(mp3|m4a|m4b|m4r|aac|wav|wave|aiff?|aifc|caf|flac|ogg|oga|opus|weba|webm|mka|wma|amr|3gp|ape|alac|ac3|mp2|mpga|dsf|dff|wv|tta|au|snd)$/i;
 const AUDIO_KEEP_RE = /\.(mp3|m4a|m4b)$/i;
 const TRANSITION_LABELS = { fade: "Dissolve", slide: "Slide", cut: "Cut" };
-const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
-const words = (n) => (n <= 20 ? WORDS[n] : n < 30 ? `twenty-${WORDS[n - 20]}` : n === 30 ? "thirty" : String(n));
+const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+// Numbers in words, the way the page speaks: "twenty-four", "three hundred", "two hundred and eighty-eight".
+function words(n) {
+  if (n < 0 || n > 999 || !Number.isInteger(n)) return String(n);
+  if (n < 20) return WORDS[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? `-${WORDS[n % 10]}` : "");
+  return `${WORDS[Math.floor(n / 100)]} hundred${n % 100 ? ` and ${words(n % 100)}` : ""}`;
+}
 const Words = (n) => words(n).replace(/^./, (c) => c.toUpperCase());
 
 const $ = (sel) => document.querySelector(sel);
@@ -187,6 +194,7 @@ async function filesFromEntries(entries) {
 // ---------------------------------------------------------------------------
 
 const THUMB_EDGE = 320; // the print is 134px wide, twice that on a Retina screen
+const AT_ONCE = Math.min(4, Math.max(2, Math.floor((navigator.hardwareConcurrency || 4) / 2))); // decodes in flight
 const queue = { running: 0, waiting: [] };
 
 function enqueue(job) {
@@ -197,7 +205,7 @@ function enqueue(job) {
 }
 
 function pump() {
-  while (queue.running < 2 && queue.waiting.length) {
+  while (queue.running < AT_ONCE && queue.waiting.length) {
     const job = queue.waiting.shift();
     queue.running++;
     job().finally(() => {
